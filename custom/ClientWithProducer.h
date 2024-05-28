@@ -32,6 +32,8 @@ public:
 
             if (resp != RdKafka::ERR_NO_ERROR) {
                 std::cerr << "Failed to send message: " << RdKafka::err2str(resp) << std::endl;
+            } else {
+                std::cout << "Message produced: " << data << std::endl;
             }
             producer->poll(0);
         }
