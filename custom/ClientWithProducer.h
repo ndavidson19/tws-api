@@ -2,7 +2,7 @@
 #define CLIENTWITHPRODUCER_H
 
 #include "TestCppClient.h"
-#include <rdkafka.h>
+#include <librdkafka/rdkafkacpp.h>
 
 class ClientWithProducer : public TestCppClient {
 public:

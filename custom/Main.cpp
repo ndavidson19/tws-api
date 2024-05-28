@@ -4,7 +4,6 @@
 #include <chrono>
 #include <thread>
 #include <librdkafka/rdkafkacpp.h>
-#include <rdkafka.h> 
 #include <pqxx/pqxx>
 #include "ClientWithProducer.h" // Include the new derived class header
 #include "EWrapper.h"
