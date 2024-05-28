@@ -62,6 +62,10 @@ int main(int argc, char** argv) {
     std::string errstr;
     ExampleDeliveryReportCb ex_dr_cb;
     RdKafka::Conf *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    if (!conf) {
+        std::cerr << "Failed to create Kafka conf" << std::endl;
+        return -1;
+    }
     conf->set("bootstrap.servers", KAFKA_BROKER, errstr);
     conf->set("dr_cb", &ex_dr_cb, errstr);
 
@@ -85,6 +89,11 @@ int main(int argc, char** argv) {
 
         while (client.isConnected()) {
             client.processMessages();
+            // Add logging to check the Kafka producer status
+            std::cout << "Kafka Producer Out Queue Length: " << producer->outq_len() << std::endl;
+            if (producer->outq_len() > 0) {
+                producer->poll(1000);
+            }
         }
 
         if (attempt >= MAX_ATTEMPTS) {
@@ -95,7 +104,7 @@ int main(int argc, char** argv) {
         std::this_thread::sleep_for(std::chrono::seconds(SLEEP_TIME));
     }
 
-    producer->flush(1000);
+    producer->flush(10000);
 
     delete producer;
     delete conf;
