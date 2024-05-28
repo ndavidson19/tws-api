@@ -41,16 +41,15 @@ const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
 
 ///////////////////////////////////////////////////////////
+// Constructor with Kafka Producer
+TestCppClient::TestCppClient(RdKafka::Producer* prod)
+    : m_osSignal(2000), m_pClient(new EClientSocket(this, &m_osSignal)), producer(prod), m_state(ST_CONNECT), m_sleepDeadline(0), m_orderId(0), m_extraAuth(false) {
+}
 // member funcs
 //! [socket_init]
-TestCppClient::TestCppClient() :
-      m_osSignal(2000)//2-seconds timeout
-    , m_pClient(new EClientSocket(this, &m_osSignal))
-	, m_state(ST_CONNECT)
-	, m_sleepDeadline(0)
-	, m_orderId(0)
-    , m_extraAuth(false)
-{
+// Original constructor
+TestCppClient::TestCppClient()
+    : m_osSignal(2000), m_pClient(new EClientSocket(this, &m_osSignal)), producer(nullptr), m_state(ST_CONNECT), m_sleepDeadline(0), m_orderId(0), m_extraAuth(false) {
 }
 //! [socket_init]
 TestCppClient::~TestCppClient()
@@ -1809,18 +1808,31 @@ void TestCppClient::receiveFA(faDataType pFaDataType, const std::string& cxml) {
 
 //! [historicaldata]
 void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
-    printf("HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
-        Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
-        decimalStringToDisplay(bar.volume).c_str(), Utils::intMaxString(bar.count).c_str(), decimalStringToDisplay(bar.wap).c_str());
+    printf("HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n",
+           reqId, bar.time.c_str(), Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(),
+           Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), decimalStringToDisplay(bar.volume).c_str(),
+           Utils::intMaxString(bar.count).c_str(), decimalStringToDisplay(bar.wap).c_str());
 
-    // Stream data to Kafka
-    std::string data = bar.time + "," + Utils::doubleMaxString(bar.open) + "," + Utils::doubleMaxString(bar.high) + "," + Utils::doubleMaxString(bar.low) + "," + Utils::doubleMaxString(bar.close);
-    RdKafka::ErrorCode resp = producer->produce(KAFKA_TOPIC, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, const_cast<char *>(data.c_str()), data.size(), nullptr, nullptr);
+    insertHistoricalDataToTimescaleDB(bar);
 
-    if (resp != RdKafka::ERR_NO_ERROR) {
-        std::cerr << "Failed to send message: " << RdKafka::err2str(resp) << std::endl;
+    if (producer) {
+        std::stringstream ss;
+        ss << "{\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high << ",\"low\":"
+           << bar.low << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count
+           << ",\"wap\":" << bar.wap << "}";
+
+        std::string data = ss.str();
+        RdKafka::ErrorCode resp = producer->produce(KAFKA_TOPIC, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY,
+                                                    const_cast<char *>(data.c_str()), data.size(), nullptr, nullptr);
+
+        if (resp != RdKafka::ERR_NO_ERROR) {
+            std::cerr << "Failed to send message: " << RdKafka::err2str(resp) << std::endl;
+        }
+
+        producer->poll(0);
     }
 }
+
 //! [historicaldata]
 
 //! [historicaldataend]
