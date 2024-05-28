@@ -2,7 +2,7 @@
 #define CLIENTWITHPRODUCER_H
 
 #include "TestCppClient.h"
-#include <librdkafka/rdkafkacpp.h>
+#include <rdkafkacpp.h>
 #include "Utils.h"  // Include the Utils header
 
 extern const std::string KAFKA_TOPIC;  // Forward declare KAFKA_TOPIC

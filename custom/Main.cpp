@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <chrono>
 #include <thread>
-#include <librdkafka/rdkafkacpp.h>
-#include <pqxx/pqxx>
+#include <rdkafkacpp.h>
+#include <pqxx>
 #include "ClientWithProducer.h" // Include the new derived class header
 #include "EWrapper.h"
 #include "Utils.h"
