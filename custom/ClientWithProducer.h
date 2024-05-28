@@ -28,7 +28,7 @@ public:
                << ",\"wap\":" << bar.wap << "}";
             std::string data = ss.str();
             RdKafka::ErrorCode resp = producer->produce(KAFKA_TOPIC, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, 
-                                                        const_cast<char *>(data.c_str()), data.size(), nullptr, nullptr);
+                                            const_cast<char *>(data.c_str()), data.size(), nullptr, 0, nullptr);
 
             if (resp != RdKafka::ERR_NO_ERROR) {
                 std::cerr << "Failed to send message: " << RdKafka::err2str(resp) << std::endl;
