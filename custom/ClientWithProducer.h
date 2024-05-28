@@ -13,6 +13,8 @@ public:
     ClientWithProducer(RdKafka::Producer* producer)
         : TestCppClient(), producer(producer) {}
 
+    void processMessages() override;
+
     void historicalData(TickerId reqId, const Bar& bar) override {
         std::cout << "HistoricalData. " << reqId << " - Date: " << bar.time << ", Open: " << Utils::doubleMaxString(bar.open)
                   << ", High: " << Utils::doubleMaxString(bar.high) << ", Low: " << Utils::doubleMaxString(bar.low)
@@ -41,6 +43,8 @@ public:
 
 private:
     RdKafka::Producer* producer;
+
+    void streamMessagesToKafka(const std::string& message);
 };
 
 #endif // CLIENTWITHPRODUCER_H
