@@ -119,7 +119,7 @@ public:
 	~TestCppClient();
 
 	void setConnectOptions(const std::string&);
-	virtual void processMessages();
+	void processMessages();
 
 public:
 
