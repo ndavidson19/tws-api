@@ -127,6 +127,13 @@ public:
 	void disconnect() const;
 	bool isConnected() const;
 
+protected:
+    std::vector<std::string> collectedData;  // Store collected data
+
+    void addCollectedData(const std::string& data) {
+        collectedData.push_back(data);
+    }
+
 private:
     void pnlOperation();
     void pnlSingleOperation();

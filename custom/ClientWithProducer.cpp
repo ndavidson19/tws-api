@@ -26,9 +26,14 @@ void ClientWithProducer::processMessages() {
     // Call the base class method
     TestCppClient::processMessages();
 
+        // Send each collected data item to Kafka
+    for (const std::string& message : collectedData) {
+        streamMessagesToKafka(message);
+    }
+
     // Your additional logic for Kafka streaming
-    std::string message = "example message"; // Replace with your actual message
-    streamMessagesToKafka(message);
+    // std::string message = "example message"; 
+    // streamMessagesToKafka(message);
 
     // Optionally, handle any additional logic required
     std::cout << "Kafka Producer Out Queue Length: " << producer->outq_len() << std::endl;
