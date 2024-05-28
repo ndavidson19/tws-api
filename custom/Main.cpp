@@ -4,9 +4,11 @@
 #include <chrono>
 #include <thread>
 #include <librdkafka/rdkafkacpp.h>
+#include <rdkafka.h> 
 #include <pqxx/pqxx>
-#include "TestCppClient.h"
+#include "ClientWithProducer.h" // Include the new derived class header
 #include "EWrapper.h"
+#include "Utils.h"
 #include "bar.h"
 
 const unsigned MAX_ATTEMPTS = 50;
@@ -47,32 +49,6 @@ void insertHistoricalDataToTimescaleDB(const Bar& bar) {
     }
 }
 
-TestCppClient::TestCppClient(RdKafka::Producer* prod) : producer(prod) {}
-
-void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
-    printf("HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", 
-           reqId, bar.time.c_str(), Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), 
-           Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), decimalStringToDisplay(bar.volume).c_str(), 
-           Utils::intMaxString(bar.count).c_str(), decimalStringToDisplay(bar.wap).c_str());
-
-    insertHistoricalDataToTimescaleDB(bar);
-
-    std::stringstream ss;
-    ss << "{\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high << ",\"low\":"
-       << bar.low << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count
-       << ",\"wap\":" << bar.wap << "}";
-
-    std::string data = ss.str();
-    RdKafka::ErrorCode resp = producer->produce(KAFKA_TOPIC, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY, 
-                                                const_cast<char *>(data.c_str()), data.size(), nullptr, nullptr);
-
-    if (resp != RdKafka::ERR_NO_ERROR) {
-        std::cerr << "Failed to send message: " << RdKafka::err2str(resp) << std::endl;
-    }
-
-    producer->poll(0);
-}
-
 int main(int argc, char** argv) {
     const char* host = argc > 1 ? argv[1] : "";
     int port = argc > 2 ? atoi(argv[2]) : 0;
@@ -100,7 +76,7 @@ int main(int argc, char** argv) {
         ++attempt;
         printf("Attempt %u of %u\n", attempt, MAX_ATTEMPTS);
 
-        TestCppClient client(producer);
+        ClientWithProducer client(producer); // Use the derived class
 
         if (connectOptions) {
             client.setConnectOptions(connectOptions);
