@@ -1,4 +1,5 @@
 #include "ClientWithProducer.h"
+#include <iostream>  // Include iostream for cout and cerr
 
 void ClientWithProducer::streamMessagesToKafka(const std::string& message) {
     RdKafka::ErrorCode resp = producer->produce(
@@ -21,13 +22,12 @@ void ClientWithProducer::streamMessagesToKafka(const std::string& message) {
     producer->poll(0);
 }
 
-
 void ClientWithProducer::processMessages() {
     // Call the base class method
     TestCppClient::processMessages();
 
     // Your additional logic for Kafka streaming
-    std::string message = "Kafka Test"; // Replace with your actual message
+    std::string message = "example message"; // Replace with your actual message
     streamMessagesToKafka(message);
 
     // Optionally, handle any additional logic required

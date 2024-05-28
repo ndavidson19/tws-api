@@ -4,6 +4,7 @@
 #include "TestCppClient.h"
 #include <librdkafka/rdkafkacpp.h>
 #include "Utils.h"  // Include the Utils header
+#include <iostream>  // Include iostream for cout and cerr
 
 extern const std::string KAFKA_TOPIC;  // Forward declare KAFKA_TOPIC
 void insertHistoricalDataToTimescaleDB(const Bar& bar);  // Forward declare the function
@@ -13,6 +14,7 @@ public:
     ClientWithProducer(RdKafka::Producer* producer)
         : TestCppClient(), producer(producer) {}
 
+    // Correct the method signature
     void processMessages() override;
 
     void historicalData(TickerId reqId, const Bar& bar) override {
