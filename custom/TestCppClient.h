@@ -120,6 +120,10 @@ public:
 
 	void setConnectOptions(const std::string&);
 	virtual void processMessages();
+	    void setState(State state) {
+        m_state = state;
+    }
+
 
 public:
 

@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
             client.setConnectOptions(connectOptions);
         }
 
-		client.m_state = ST_HISTORICALDATAREQUESTS;
+        client.setState(ST_HISTORICALDATAREQUESTS);
 
         client.connect(host, port, clientId);
 
