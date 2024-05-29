@@ -559,15 +559,6 @@ void TestCppClient::realTimeBars()
 	m_state = ST_REALTIMEBARS_ACK;
 }
 
-void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
-    std::stringstream ss;
-    ss << "{\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high << ",\"low\":" << bar.low
-       << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count << ",\"wap\":" << bar.wap << "}";
-    std::string data = ss.str();
-    historicalDataCollectedData.push_back(data);  // Store collected data
-}
-
-
 void TestCppClient::marketDataType()
 {
 	//! [reqmarketdatatype]
@@ -1825,6 +1816,14 @@ void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
     printf( "HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
         Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
         decimalStringToDisplay(bar.volume).c_str(), Utils::intMaxString(bar.count).c_str(), decimalStringToDisplay(bar.wap).c_str());
+		    // Collect the data into a JSON string
+    std::stringstream ss;
+    ss << "{\"reqId\":" << reqId << ",\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high
+       << ",\"low\":" << bar.low << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count << ",\"wap\":" << bar.wap << "}";
+    std::string data = ss.str();
+    
+    // Store the collected data
+    historicalDataCollectedData.push_back(data);
 }
 //! [historicaldata]
 

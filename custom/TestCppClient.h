@@ -136,9 +136,6 @@ protected:
     // Add a vector to store historical data
     std::vector<std::string> historicalDataCollectedData;
 
-    // Override the historicalData method to collect data
-    void historicalData(TickerId reqId, const Bar& bar);
-	
 private:
     void pnlOperation();
     void pnlSingleOperation();
