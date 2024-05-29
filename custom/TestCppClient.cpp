@@ -42,28 +42,6 @@
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
 
-
-void produce_to_kafka(const std::string& message) {
-    RdKafka::ErrorCode resp = producer->produce(
-        /* Topic name */ KAFKA_TOPIC,
-        /* Any Partition */ RdKafka::Topic::PARTITION_UA,
-        /* Message payload and length */ RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-        const_cast<char *>(message.c_str()), message.size(),
-        /* Optional key and its length */ NULL, 0,
-        /* Message timestamp (defaults to current time) */ 0,
-        /* Message headers, if any */ NULL,
-        /* Per-message opaque value passed to delivery report */ NULL);
-
-    if (resp != RdKafka::ERR_NO_ERROR) {
-        std::cerr << "Failed to produce message: " << RdKafka::err2str(resp) << std::endl;
-    } else {
-        std::cout << "Message produced successfully" << std::endl;
-    }
-
-    // Poll to handle delivery reports
-    producer->poll(0);
-}
-
 ///////////////////////////////////////////////////////////
 // member funcs
 //! [socket_init]
@@ -387,6 +365,26 @@ void TestCppClient::processMessages()
 
 //////////////////////////////////////////////////////////////////
 // methods
+void TestCppClient::produce_to_kafka(const std::string& message) {
+    RdKafka::ErrorCode resp = m_producer->produce(
+        /* Topic name */ m_kafka_topic,
+        /* Any Partition */ RdKafka::Topic::PARTITION_UA,
+        /* Message payload and length */ RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
+        const_cast<char *>(message.c_str()), message.size(),
+        /* Optional key and its length */ NULL, 0,
+        /* Message timestamp (defaults to current time) */ 0,
+        /* Message headers, if any */ NULL,
+        /* Per-message opaque value passed to delivery report */ NULL);
+
+    if (resp != RdKafka::ERR_NO_ERROR) {
+        std::cerr << "Failed to produce message: " << RdKafka::err2str(resp) << std::endl;
+    } else {
+        std::cout << "Message produced successfully" << std::endl;
+    }
+
+    // Poll to handle delivery reports
+    m_producer->poll(0);
+}
 //! [connectack]
 void TestCppClient::connectAck() {
 	if (!m_extraAuth && m_pClient->asyncEConnect())

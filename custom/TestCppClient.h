@@ -124,8 +124,7 @@ public:
 	    void setState(State state) {
         m_state = state;
     }
-
-
+    void produce_to_kafka(const std::string& message);
 public:
 
 	bool connect(const char * host, int port, int clientId = 0);
