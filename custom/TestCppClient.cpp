@@ -42,6 +42,8 @@
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
 
+const std::string KAFKA_TOPIC = "market_data";
+
 ///////////////////////////////////////////////////////////
 // member funcs
 //! [socket_init]
