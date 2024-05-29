@@ -176,10 +176,6 @@ void TestCppClient::processMessages()
 			break;
 		case ST_HISTORICALDATAREQUESTS:
             historicalDataRequests();
-            // Add collected data from historicalDataRequests operation
-            for (const auto& data : historicalDataCollectedData) {
-                addCollectedData(data);
-            }
 			break;
 		case ST_HISTORICALDATAREQUESTS_ACK:
 			break;
@@ -1529,8 +1525,8 @@ void TestCppClient::nextValidId( OrderId orderId)
 	//m_state = ST_MARKETDEPTHOPERATION;
 	//m_state = ST_REALTIMEBARS;
 	//m_state = ST_MARKETDATATYPE;
-	//m_state = ST_HISTORICALDATAREQUESTS;
-	m_state = ST_CONTRACTOPERATION;
+	m_state = ST_HISTORICALDATAREQUESTS;
+	//m_state = ST_CONTRACTOPERATION;
 	//m_state = ST_MARKETSCANNERS;
 	//m_state = ST_FUNDAMENTALS;
 	//m_state = ST_BULLETINS;
