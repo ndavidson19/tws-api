@@ -48,6 +48,68 @@ void insertHistoricalDataToTimescaleDB(const Bar& bar) {
     }
 }
 
+void runKafkaConsumer() {
+    std::string brokers = KAFKA_BROKER;
+    std::string topic = KAFKA_TOPIC;
+    std::string errstr;
+
+    RdKafka::Conf *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    conf->set("bootstrap.servers", brokers, errstr);
+    conf->set("group.id", "consumer_group", errstr);
+    conf->set("auto.offset.reset", "earliest", errstr);
+
+    RdKafka::KafkaConsumer *consumer = RdKafka::KafkaConsumer::create(conf, errstr);
+    if (!consumer) {
+        std::cerr << "Failed to create consumer: " << errstr << std::endl;
+        return;
+    }
+
+    std::vector<std::string> topics = { topic };
+    RdKafka::ErrorCode err = consumer->subscribe(topics);
+    if (err) {
+        std::cerr << "Failed to subscribe to " << topics.size() << " topics: "
+                  << RdKafka::err2str(err) << std::endl;
+        return;
+    }
+
+    while (true) {
+        RdKafka::Message *msg = consumer->consume(1000);
+        switch (msg->err()) {
+            case RdKafka::ERR__TIMED_OUT:
+                break;
+
+            case RdKafka::ERR_NO_ERROR:
+                std::cout << "Read msg at offset " << msg->offset() << "\n";
+                if (msg->key()) {
+                    std::cout << "Key: " << *msg->key() << "\n";
+                }
+                printf("%.*s\n",
+                       static_cast<int>(msg->len()),
+                       static_cast<const char *>(msg->payload()));
+                break;
+
+            case RdKafka::ERR__PARTITION_EOF:
+                std::cerr << "%% Reached end of topic " << msg->topic_name()
+                          << " partition " << msg->partition() << " at offset "
+                          << msg->offset() << std::endl;
+                break;
+
+            case RdKafka::ERR__UNKNOWN_TOPIC:
+            case RdKafka::ERR__UNKNOWN_PARTITION:
+                std::cerr << "Consume failed: " << msg->errstr() << std::endl;
+                break;
+
+            default:
+                std::cerr << "Consume failed: " << msg->errstr() << std::endl;
+        }
+        delete msg;
+    }
+
+    consumer->close();
+    delete consumer;
+    delete conf;
+}
+
 int main(int argc, char** argv) {
     const char* host = argc > 1 ? argv[1] : "";
     int port = argc > 2 ? atoi(argv[2]) : 0;
@@ -74,6 +136,8 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create producer: " << errstr << std::endl;
         return -1;
     }
+
+    std::thread consumerThread(runKafkaConsumer);  // Start the Kafka consumer in a separate thread
 
     for (;;) {
         ++attempt;
@@ -108,6 +172,8 @@ int main(int argc, char** argv) {
 
     delete producer;
     delete conf;
+
+    consumerThread.join();  // Wait for the consumer thread to finish
 
     printf("End of C++ Socket Client Test\n");
     return 0;
