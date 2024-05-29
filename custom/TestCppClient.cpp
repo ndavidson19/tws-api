@@ -42,17 +42,25 @@
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
 
-void produce_to_kafka(const std::string &topic, const std::string &data, RdKafka::Producer *producer, RdKafka::Topic *kafka_topic) {
-    RdKafka::ErrorCode resp = producer->produce(kafka_topic, RdKafka::Topic::PARTITION_UA,
-                                                RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                const_cast<char *>(data.c_str()), data.size(),
-                                                nullptr, 0,
-                                                0, nullptr, nullptr);
+
+void produce_to_kafka(const std::string& message) {
+    RdKafka::ErrorCode resp = producer->produce(
+        /* Topic name */ KAFKA_TOPIC,
+        /* Any Partition */ RdKafka::Topic::PARTITION_UA,
+        /* Message payload and length */ RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
+        const_cast<char *>(message.c_str()), message.size(),
+        /* Optional key and its length */ NULL, 0,
+        /* Message timestamp (defaults to current time) */ 0,
+        /* Message headers, if any */ NULL,
+        /* Per-message opaque value passed to delivery report */ NULL);
+
     if (resp != RdKafka::ERR_NO_ERROR) {
-        std::cerr << "% Produce failed: " << RdKafka::err2str(resp) << std::endl;
+        std::cerr << "Failed to produce message: " << RdKafka::err2str(resp) << std::endl;
     } else {
-        std::cerr << "% Produced message (" << data.size() << " bytes)" << std::endl;
+        std::cout << "Message produced successfully" << std::endl;
     }
+
+    // Poll to handle delivery reports
     producer->poll(0);
 }
 

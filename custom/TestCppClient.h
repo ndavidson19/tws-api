@@ -5,6 +5,7 @@
 #ifndef TWS_API_SAMPLES_TESTCPPCLIENT_TESTCPPCLIENT_H
 #define TWS_API_SAMPLES_TESTCPPCLIENT_TESTCPPCLIENT_H
 
+#include <librdkafka/rdkafkacpp.h>
 #include "EWrapper.h"
 #include "EReaderOSSignal.h"
 #include "EReader.h"
@@ -210,6 +211,8 @@ private:
 	std::unique_ptr<EReader> m_pReader;
     bool m_extraAuth;
 	std::string m_bboExchange;
+	RdKafka::Producer *m_producer;
+    RdKafka::Topic *m_kafka_topic;
 };
 
 #endif
