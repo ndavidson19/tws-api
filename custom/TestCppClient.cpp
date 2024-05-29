@@ -1,6 +1,8 @@
 ﻿/* Copyright (C) 2019 Interactive Brokers LLC. All rights reserved. This code is subject to the terms
  * and conditions of the IB API Non-Commercial License or the IB API Commercial License, as applicable. */
 
+#include <librdkafka/rdkafkacpp.h>
+
 #include "StdAfx.h"
 
 #include "TestCppClient.h"
@@ -40,6 +42,20 @@
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
 
+void produce_to_kafka(const std::string &topic, const std::string &data, RdKafka::Producer *producer, RdKafka::Topic *kafka_topic) {
+    RdKafka::ErrorCode resp = producer->produce(kafka_topic, RdKafka::Topic::PARTITION_UA,
+                                                RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
+                                                const_cast<char *>(data.c_str()), data.size(),
+                                                nullptr, 0,
+                                                0, nullptr, nullptr);
+    if (resp != RdKafka::ERR_NO_ERROR) {
+        std::cerr << "% Produce failed: " << RdKafka::err2str(resp) << std::endl;
+    } else {
+        std::cerr << "% Produced message (" << data.size() << " bytes)" << std::endl;
+    }
+    producer->poll(0);
+}
+
 ///////////////////////////////////////////////////////////
 // member funcs
 //! [socket_init]
@@ -51,6 +67,24 @@ TestCppClient::TestCppClient() :
 	, m_orderId(0)
     , m_extraAuth(false)
 {
+	// Initialize Kafka producer
+    std::string brokers = "kafka:9092";
+    std::string errstr;
+    RdKafka::Conf *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    if (conf->set("bootstrap.servers", brokers, errstr) != RdKafka::Conf::CONF_OK) {
+        std::cerr << errstr << std::endl;
+        exit(1);
+    }
+    m_producer = RdKafka::Producer::create(conf, errstr);
+    if (!m_producer) {
+        std::cerr << "Failed to create producer: " << errstr << std::endl;
+        exit(1);
+    }
+    m_kafka_topic = RdKafka::Topic::create(m_producer, "market_data", nullptr, errstr);
+    if (!m_kafka_topic) {
+        std::cerr << "Failed to create topic: " << errstr << std::endl;
+        exit(1);
+    }
 }
 //! [socket_init]
 TestCppClient::~TestCppClient()
@@ -60,6 +94,9 @@ TestCppClient::~TestCppClient()
 		m_pReader.reset();
 
 	delete m_pClient;
+	    // Clean up Kafka
+    delete m_kafka_topic;
+    delete m_producer;
 }
 
 bool TestCppClient::connect(const char *host, int port, int clientId)
@@ -1542,45 +1579,152 @@ void TestCppClient::error(int id, int errorCode, const std::string& errorString,
 //! [error]
 
 //! [tickprice]
-void TestCppClient::tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attribs) {
-    printf( "Tick Price. Ticker Id: %ld, Field: %d, Price: %s, CanAutoExecute: %d, PastLimit: %d, PreOpen: %d\n", tickerId, (int)field, Utils::doubleMaxString(price).c_str(), attribs.canAutoExecute, attribs.pastLimit, attribs.preOpen);
+//! [tickprice]
+void TestCppClient::tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attribs) {
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"field\":" << (int)field << ",";
+    ss << "\"price\":\"" << Utils::doubleMaxString(price) << "\",";
+    ss << "\"canAutoExecute\":" << attribs.canAutoExecute << ",";
+    ss << "\"pastLimit\":" << attribs.pastLimit << ",";
+    ss << "\"preOpen\":" << attribs.preOpen;
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("Tick Price. Ticker Id: %ld, Field: %d, Price: %s, CanAutoExecute: %d, PastLimit: %d, PreOpen: %d\n",
+           tickerId, (int)field, Utils::doubleMaxString(price).c_str(), attribs.canAutoExecute, attribs.pastLimit, attribs.preOpen);
 }
 //! [tickprice]
 
+//! [tickprice]
+
 //! [ticksize]
-void TestCppClient::tickSize( TickerId tickerId, TickType field, Decimal size) {
-	printf( "Tick Size. Ticker Id: %ld, Field: %d, Size: %s\n", tickerId, (int)field, decimalStringToDisplay(size).c_str());
+//! [ticksize]
+void TestCppClient::tickSize(TickerId tickerId, TickType field, Decimal size) {
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"field\":" << (int)field << ",";
+    ss << "\"size\":\"" << decimalStringToDisplay(size) << "\"";
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("Tick Size. Ticker Id: %ld, Field: %d, Size: %s\n", tickerId, (int)field, decimalStringToDisplay(size).c_str());
 }
 //! [ticksize]
 
+//! [ticksize]
+
 //! [tickoptioncomputation]
-void TestCppClient::tickOptionComputation( TickerId tickerId, TickType tickType, int tickAttrib, double impliedVol, double delta,
+//! [tickoptioncomputation]
+void TestCppClient::tickOptionComputation(TickerId tickerId, TickType tickType, int tickAttrib, double impliedVol, double delta,
                                           double optPrice, double pvDividend,
                                           double gamma, double vega, double theta, double undPrice) {
-    printf( "TickOptionComputation. Ticker Id: %ld, Type: %d, TickAttrib: %s, ImpliedVolatility: %s, Delta: %s, OptionPrice: %s, pvDividend: %s, Gamma: %s, Vega: %s, Theta: %s, Underlying Price: %s\n", 
-        tickerId, (int)tickType, Utils::intMaxString(tickAttrib).c_str(), Utils::doubleMaxString(impliedVol).c_str(), Utils::doubleMaxString(delta).c_str(), Utils::doubleMaxString(optPrice).c_str(), 
-        Utils::doubleMaxString(pvDividend).c_str(), Utils::doubleMaxString(gamma).c_str(), Utils::doubleMaxString(vega).c_str(), Utils::doubleMaxString(theta).c_str(), Utils::doubleMaxString(undPrice).c_str());
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"tickType\":" << (int)tickType << ",";
+    ss << "\"tickAttrib\":\"" << Utils::intMaxString(tickAttrib) << "\",";
+    ss << "\"impliedVol\":\"" << Utils::doubleMaxString(impliedVol) << "\",";
+    ss << "\"delta\":\"" << Utils::doubleMaxString(delta) << "\",";
+    ss << "\"optPrice\":\"" << Utils::doubleMaxString(optPrice) << "\",";
+    ss << "\"pvDividend\":\"" << Utils::doubleMaxString(pvDividend) << "\",";
+    ss << "\"gamma\":\"" << Utils::doubleMaxString(gamma) << "\",";
+    ss << "\"vega\":\"" << Utils::doubleMaxString(vega) << "\",";
+    ss << "\"theta\":\"" << Utils::doubleMaxString(theta) << "\",";
+    ss << "\"undPrice\":\"" << Utils::doubleMaxString(undPrice) << "\"";
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("TickOptionComputation. Ticker Id: %ld, Type: %d, TickAttrib: %s, ImpliedVolatility: %s, Delta: %s, OptionPrice: %s, pvDividend: %s, Gamma: %s, Vega: %s, Theta: %s, Underlying Price: %s\n",
+           tickerId, (int)tickType, Utils::intMaxString(tickAttrib).c_str(), Utils::doubleMaxString(impliedVol).c_str(), Utils::doubleMaxString(delta).c_str(),
+           Utils::doubleMaxString(optPrice).c_str(), Utils::doubleMaxString(pvDividend).c_str(), Utils::doubleMaxString(gamma).c_str(),
+           Utils::doubleMaxString(vega).c_str(), Utils::doubleMaxString(theta).c_str(), Utils::doubleMaxString(undPrice).c_str());
 }
+//! [tickoptioncomputation]
+
 //! [tickoptioncomputation]
 
 //! [tickgeneric]
+//! [tickgeneric]
 void TestCppClient::tickGeneric(TickerId tickerId, TickType tickType, double value) {
-    printf( "Tick Generic. Ticker Id: %ld, Type: %d, Value: %s\n", tickerId, (int)tickType, Utils::doubleMaxString(value).c_str());
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"tickType\":" << (int)tickType << ",";
+    ss << "\"value\":\"" << Utils::doubleMaxString(value) << "\"";
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("Tick Generic. Ticker Id: %ld, Type: %d, Value: %s\n", tickerId, (int)tickType, Utils::doubleMaxString(value).c_str());
 }
+//! [tickgeneric]
+
 //! [tickgeneric]
 
 //! [tickstring]
+//! [tickstring]
 void TestCppClient::tickString(TickerId tickerId, TickType tickType, const std::string& value) {
-	printf( "Tick String. Ticker Id: %ld, Type: %d, Value: %s\n", tickerId, (int)tickType, value.c_str());
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"tickType\":" << (int)tickType << ",";
+    ss << "\"value\":\"" << value << "\"";
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("Tick String. Ticker Id: %ld, Type: %d, Value: %s\n", tickerId, (int)tickType, value.c_str());
 }
+//! [tickstring]
+
 //! [tickstring]
 
 void TestCppClient::tickEFP(TickerId tickerId, TickType tickType, double basisPoints, const std::string& formattedBasisPoints,
                             double totalDividends, int holdDays, const std::string& futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate) {
-    printf( "TickEFP. %ld, Type: %d, BasisPoints: %s, FormattedBasisPoints: %s, Total Dividends: %s, HoldDays: %s, Future Last Trade Date: %s, Dividend Impact: %s, Dividends To Last Trade Date: %s\n", 
-        tickerId, (int)tickType, Utils::doubleMaxString(basisPoints).c_str(), formattedBasisPoints.c_str(), Utils::doubleMaxString(totalDividends).c_str(), Utils::intMaxString(holdDays).c_str(), 
-        futureLastTradeDate.c_str(), Utils::doubleMaxString(dividendImpact).c_str(), Utils::doubleMaxString(dividendsToLastTradeDate).c_str());
+    // Create JSON string
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"tickerId\":" << tickerId << ",";
+    ss << "\"tickType\":" << (int)tickType << ",";
+    ss << "\"basisPoints\":\"" << Utils::doubleMaxString(basisPoints) << "\",";
+    ss << "\"formattedBasisPoints\":\"" << formattedBasisPoints << "\",";
+    ss << "\"totalDividends\":\"" << Utils::doubleMaxString(totalDividends) << "\",";
+    ss << "\"holdDays\":\"" << Utils::intMaxString(holdDays) << "\",";
+    ss << "\"futureLastTradeDate\":\"" << futureLastTradeDate << "\",";
+    ss << "\"dividendImpact\":\"" << Utils::doubleMaxString(dividendImpact) << "\",";
+    ss << "\"dividendsToLastTradeDate\":\"" << Utils::doubleMaxString(dividendsToLastTradeDate) << "\"";
+    ss << "}";
+
+    std::string data = ss.str();
+    produce_to_kafka(data);
+
+    // Print to console
+    printf("TickEFP. %ld, Type: %d, BasisPoints: %s, FormattedBasisPoints: %s, Total Dividends: %s, HoldDays: %s, Future Last Trade Date: %s, Dividend Impact: %s, Dividends To Last Trade Date: %s\n",
+           tickerId, (int)tickType, Utils::doubleMaxString(basisPoints).c_str(), formattedBasisPoints.c_str(), Utils::doubleMaxString(totalDividends).c_str(),
+           Utils::intMaxString(holdDays).c_str(), futureLastTradeDate.c_str(), Utils::doubleMaxString(dividendImpact).c_str(), Utils::doubleMaxString(dividendsToLastTradeDate).c_str());
 }
+
 
 //! [orderstatus]
 void TestCppClient::orderStatus(OrderId orderId, const std::string& status, Decimal filled,
