@@ -1806,6 +1806,14 @@ void TestCppClient::contractDetails( int reqId, const ContractDetails& contractD
 	printContractMsg(contractDetails.contract);
 	printContractDetailsMsg(contractDetails);
 	printf( "ContractDetails end. ReqId: %d\n", reqId);
+	    // Prepare message for Kafka
+    std::string message = "ContractDetails: ReqId: " + std::to_string(reqId) + 
+                          ", Symbol: " + contractDetails.contract.symbol + 
+                          ", SecType: " + contractDetails.contract.secType + 
+                          ", Exchange: " + contractDetails.contract.exchange;
+
+    // Produce message to Kafka
+    produce_to_kafka(message);
 }
 //! [contractdetails]
 
@@ -1814,6 +1822,14 @@ void TestCppClient::bondContractDetails( int reqId, const ContractDetails& contr
 	printf( "BondContractDetails begin. ReqId: %d\n", reqId);
 	printBondContractDetailsMsg(contractDetails);
 	printf( "BondContractDetails end. ReqId: %d\n", reqId);
+	// Prepare message for Kafka
+    std::string message = "BondContractDetails: ReqId: " + std::to_string(reqId) + 
+                          ", Symbol: " + contractDetails.contract.symbol + 
+                          ", SecType: " + contractDetails.contract.secType + 
+                          ", Exchange: " + contractDetails.contract.exchange;
+
+    // Produce message to Kafka
+    produce_to_kafka(message);
 }
 //! [bondcontractdetails]
 
@@ -1830,6 +1846,14 @@ void TestCppClient::printContractMsg(const Contract& contract) {
 	printf("\tCurrency: %s\n", contract.currency.c_str());
 	printf("\tLocalSymbol: %s\n", contract.localSymbol.c_str());
 	printf("\tTradingClass: %s\n", contract.tradingClass.c_str());
+
+	// Prepare message for Kafka
+	std::string message = "Contract: Symbol: " + contract.symbol + 
+						  ", SecType: " + contract.secType + 
+						  ", Exchange: " + contract.exchange;
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
 }
 
 void TestCppClient::printContractDetailsMsg(const ContractDetails& contractDetails) {
@@ -1860,6 +1884,34 @@ void TestCppClient::printContractDetailsMsg(const ContractDetails& contractDetai
 	printf("\tSizeIncrement: %s\n", decimalStringToDisplay(contractDetails.sizeIncrement).c_str());
 	printf("\tSuggestedSizeIncrement: %s\n", decimalStringToDisplay(contractDetails.suggestedSizeIncrement).c_str());
 	printContractDetailsSecIdList(contractDetails.secIdList);
+
+	// Prepare message for Kafka
+	std::string message = "ContractDetails: MarketName: " + contractDetails.marketName + 
+						  ", MinTick: " + Utils::doubleMaxString(contractDetails.minTick) + 
+						  ", PriceMagnifier: " + Utils::longMaxString(contractDetails.priceMagnifier) + 
+						  ", OrderTypes: " + contractDetails.orderTypes + 
+						  ", ValidExchanges: " + contractDetails.validExchanges + 
+						  ", UnderConId: " + Utils::intMaxString(contractDetails.underConId) + 
+						  ", LongName: " + contractDetails.longName + 
+						  ", ContractMonth: " + contractDetails.contractMonth + 
+						  ", Indystry: " + contractDetails.industry + 
+						  ", Category: " + contractDetails.category + 
+						  ", SubCategory: " + contractDetails.subcategory + 
+						  ", TimeZoneId: " + contractDetails.timeZoneId + 
+						  ", TradingHours: " + contractDetails.tradingHours + 
+						  ", LiquidHours: " + contractDetails.liquidHours + 
+						  ", EvRule: " + contractDetails.evRule + 
+						  ", EvMultiplier: " + Utils::doubleMaxString(contractDetails.evMultiplier) + 
+						  ", AggGroup: " + Utils::intMaxString(contractDetails.aggGroup) + 
+						  ", UnderSymbol: " + contractDetails.underSymbol + 
+						  ", UnderSecType: " + contractDetails.underSecType + 
+						  ", MarketRuleIds: " + contractDetails.marketRuleIds + 
+						  ", RealExpirationDate: " + contractDetails.realExpirationDate + 
+						  ", LastTradeTime: " + contractDetails.lastTradeTime + 
+						  ", StockType: " + contractDetails.stockType + 
+						  ", MinSize: " + decimalStringToDisplay(contractDetails.minSize) + 
+						  ", SizeIncrement: " + decimalStringToDisplay(contractDetails.sizeIncrement) + 
+						  ", SuggestedSizeIncrement: " + decimalStringToDisplay(contractDetails.suggestedSizeIncrement);
 }
 
 void TestCppClient::printContractDetailsSecIdList(const TagValueListSPtr &secIdList) {
@@ -1872,6 +1924,16 @@ void TestCppClient::printContractDetailsSecIdList(const TagValueListSPtr &secIdL
 		}
 		printf("}\n");
 	}
+
+	// Prepare message for Kafka
+	std::string message = "ContractDetailsSecIdList: ";
+	for (int i = 0; i < secIdListCount; ++i) {
+		const TagValue* tagValue = ((*secIdList)[i]).get();
+		message += tagValue->tag + "=" + tagValue->value + ";";
+	}
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
 }
 
 void TestCppClient::printBondContractDetailsMsg(const ContractDetails& contractDetails) {
@@ -1936,6 +1998,17 @@ void TestCppClient::updateMktDepth(TickerId id, int position, int operation, int
                                    double price, Decimal size) {
     printf( "UpdateMarketDepth. %ld - Position: %s, Operation: %d, Side: %d, Price: %s, Size: %s\n", id, Utils::intMaxString(position).c_str(), operation, side, 
         Utils::doubleMaxString(price).c_str(), decimalStringToDisplay(size).c_str());
+
+	// Prepare message for Kafka
+	std::string message = "UpdateMarketDepth: Id: " + std::to_string(id) + 
+						  ", Position: " + Utils::intMaxString(position) + 
+						  ", Operation: " + std::to_string(operation) + 
+						  ", Side: " + std::to_string(side) + 
+						  ", Price: " + Utils::doubleMaxString(price) + 
+						  ", Size: " + decimalStringToDisplay(size);
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
 }
 //! [updatemktdepth]
 
@@ -1970,14 +2043,20 @@ void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
     printf( "HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
         Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
         decimalStringToDisplay(bar.volume).c_str(), Utils::intMaxString(bar.count).c_str(), decimalStringToDisplay(bar.wap).c_str());
-		    // Collect the data into a JSON string
-    std::stringstream ss;
-    ss << "{\"reqId\":" << reqId << ",\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high
-       << ",\"low\":" << bar.low << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count << ",\"wap\":" << bar.wap << "}";
-    std::string data = ss.str();
-    
-    // Store the collected data
-    historicalDataCollectedData.push_back(data);
+
+	// Prepare message for Kafka
+	std::string message = "HistoricalData: ReqId: " + std::to_string(reqId) + 
+						  ", Date: " + bar.time + 
+						  ", Open: " + Utils::doubleMaxString(bar.open) + 
+						  ", High: " + Utils::doubleMaxString(bar.high) + 
+						  ", Low: " + Utils::doubleMaxString(bar.low) + 
+						  ", Close: " + Utils::doubleMaxString(bar.close) + 
+						  ", Volume: " + decimalStringToDisplay(bar.volume) + 
+						  ", Count: " + Utils::intMaxString(bar.count) + 
+						  ", WAP: " + decimalStringToDisplay(bar.wap);
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
 }
 //! [historicaldata]
 
@@ -2035,6 +2114,14 @@ void TestCppClient::tickSnapshotEnd(int reqId) {
 //! [marketdatatype]
 void TestCppClient::marketDataType(TickerId reqId, int marketDataType) {
 	printf( "MarketDataType. ReqId: %ld, Type: %d\n", reqId, marketDataType);
+
+	// Prepare message for Kafka
+	std::string message = "MarketDataType: ReqId: " + std::to_string(reqId) + 
+						  ", Type: " + std::to_string(marketDataType);
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
+
 }
 //! [marketdatatype]
 
@@ -2047,6 +2134,18 @@ void TestCppClient::commissionReport( const CommissionReport& commissionReport) 
 //! [position]
 void TestCppClient::position( const std::string& account, const Contract& contract, Decimal position, double avgCost) {
     printf( "Position. %s - Symbol: %s, SecType: %s, Currency: %s, Position: %s, Avg Cost: %s\n", account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), decimalStringToDisplay(position).c_str(), Utils::doubleMaxString(avgCost).c_str());
+
+	// Prepare message for Kafka
+	std::string message = "Position: Account: " + account + 
+						  ", Symbol: " + contract.symbol + 
+						  ", SecType: " + contract.secType + 
+						  ", Currency: " + contract.currency + 
+						  ", Position: " + decimalStringToDisplay(position) + 
+						  ", Avg Cost: " + Utils::doubleMaxString(avgCost);
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
+
 }
 //! [position]
 
@@ -2170,6 +2269,13 @@ void TestCppClient::symbolSamples(int reqId, const std::vector<ContractDescripti
 		printf(", description: %s, issuerId: %s", contract.description.c_str(), contract.issuerId.c_str());
 		printf("\n");
 	}
+
+	// Prepare message for Kafka
+	std::string message = "SymbolSamples: Total: " + std::to_string(contractDescriptions.size()) + 
+						  ", ReqId: " + std::to_string(reqId);
+
+	// Produce message to Kafka
+	produce_to_kafka(message);
 }
 //! [symbolSamples]
 
