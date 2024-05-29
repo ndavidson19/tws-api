@@ -150,7 +150,11 @@ void TestCppClient::processMessages()
 		case ST_MARKETDATATYPE_ACK:
 			break;
 		case ST_HISTORICALDATAREQUESTS:
-			historicalDataRequests();
+            historicalDataRequests();
+            // Add collected data from historicalDataRequests operation
+            for (const auto& data : historicalDataCollectedData) {
+                addCollectedData(data);
+            }
 			break;
 		case ST_HISTORICALDATAREQUESTS_ACK:
 			break;
@@ -554,6 +558,15 @@ void TestCppClient::realTimeBars()
 
 	m_state = ST_REALTIMEBARS_ACK;
 }
+
+void TestCppClient::historicalData(TickerId reqId, const Bar& bar) {
+    std::stringstream ss;
+    ss << "{\"time\":\"" << bar.time << "\",\"open\":" << bar.open << ",\"high\":" << bar.high << ",\"low\":" << bar.low
+       << ",\"close\":" << bar.close << ",\"volume\":" << bar.volume << ",\"count\":" << bar.count << ",\"wap\":" << bar.wap << "}";
+    std::string data = ss.str();
+    historicalDataCollectedData.push_back(data);  // Store collected data
+}
+
 
 void TestCppClient::marketDataType()
 {
